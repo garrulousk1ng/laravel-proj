@@ -5,9 +5,16 @@
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card">
-                <div class="card-header">{{ __('Register') }}</div>
+                <div class="card-header">{{ __('Admin Register') }}</div>
 
                 <div class="card-body">
+
+                    @if (session('admin_register'))
+                        <div class="alert alert-info">
+                            You are registering an <strong>admin</strong> account using a special link.
+                        </div>
+                    @endif
+
                     <form method="POST" action="{{ route('register') }}">
                         @csrf
 

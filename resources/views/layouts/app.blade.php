@@ -140,13 +140,14 @@
         .navbar .navbar-brand {
             font-weight: 700;
             color: var(--text);
-            transition: color var(--transition);
+            text-shadow: none;
+            transition: background var(--transition), color var(--transition);
             font-size: 1.25rem;
         }
 
         .navbar .nav-link {
             color: var(--text);
-            transition: color var(--transition);
+            transition: background var(--transition), color var(--transition);
             font-weight: 500;
         }
 
@@ -315,6 +316,11 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
+        .dropdown-item, .admin-Dropdown {
+            color: var(--text);
+            transition: background var(--transition), color var(--transition);
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 1.5rem;
@@ -356,7 +362,6 @@
     </style>
 </head>
 <body>
-<body>
     <div id="app">
         @if (!Request::is('404'))
             <button class="theme-toggle" onclick="toggleTheme()">Theme</button>
@@ -364,8 +369,7 @@
 
         <nav class="navbar navbar-expand-md shadow-sm" style="background: var(--container); transition: background var(--transition);">
             <div class="container">
-                <a class="navbar-brand" href="{{ route('posts.index') }}"
-                   style="color: var(--text); font-weight: 700; text-shadow: none; transition: all var(--transition);">
+                <a class="navbar-brand" href="{{ route('posts.index') }}">
                     Laravel Blog
                 </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
@@ -381,6 +385,8 @@
                     <!-- Right -->
                     <ul class="navbar-nav ms-auto">
                         @guest
+
+                        <!--
                             @if (Route::has('login'))
                                 <li class="nav-item">
                                     <a class="nav-link" href="{{ route('login') }}"
@@ -397,19 +403,20 @@
                                     </a>
                                 </li>
                             @endif
+                        -->
                         @else
                             <li class="nav-item dropdown">
                                 <a id="navbarDropdown" class="nav-link dropdown-toggle"
-                                   style="color: var(--text); transition: color var(--transition);"
-                                   href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                style="color: var(--text); transition: color var(--transition);"
+                                href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                     {{ Auth::user()->name }}
                                 </a>
 
                                 <div class="dropdown-menu dropdown-menu-end"
-                                     style="background: var(--container); color: var(--text);">
+                                    style="background: var(--container); color: var(--text);">
                                     <a class="dropdown-item" href="{{ route('logout') }}"
-                                       onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
-                                       style="color: var(--text); transition: color var(--transition);">
+                                    onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+                                    style="color: var(--text); transition: color var(--transition);">
                                         {{ __('Logout') }}
                                     </a>
                                     <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
@@ -417,6 +424,24 @@
                                     </form>
                                 </div>
                             </li>
+                            @if (Auth::check() && Auth::user()->role && Auth::user()->role->name === 'admin')
+                                <li class="nav-item dropdown">
+                                    <a id="adminDropdown" class="nav-link dropdown-toggle"
+                                    href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"
+                                    style="color: var(--text); transition: color var(--transition);">
+                                        Admin
+                                    </a>
+                                    <div class="dropdown-menu dropdown-menu-end"
+                                        style="background: var(--container); color: var(--text);">
+                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#rolesModal">
+                                            Roles
+                                        </a>
+                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#usersModal">
+                                            Users
+                                        </a>
+                                    </div>
+                                </li>
+                            @endif
                         @endguest
                     </ul>
                 </div>
@@ -449,5 +474,148 @@
             localStorage.setItem('theme', next);
         }
     </script>
+
+<!-- Roles Modal -->
+@if(isset($roles))
+<div class="modal fade" id="rolesModal" tabindex="-1" aria-labelledby="rolesModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" style="background: var(--container); color: var(--text);">
+      <div class="modal-header">
+        <h5 class="modal-title" id="rolesModalLabel">Manage Roles</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        @if (session('success'))
+            <div class="alert alert-success">{{ session('success') }}</div>
+        @endif
+        @if (session('error'))
+            <div class="alert alert-danger">{{ session('error') }}</div>
+        @endif
+
+        <!-- Role Creation Form -->
+        <form method="POST" action="{{ route('admin.roles.store') }}">
+          @csrf
+          <div class="input-group mb-3">
+            <input type="text" name="name" class="form-control" placeholder="New Role Name" required>
+            <button class="btn btn-primary" type="submit">Add Role</button>
+          </div>
+        </form>
+
+        <!-- Role List Table -->
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Role Name</th>
+              <th>User Count</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach ($roles as $role)
+              <tr>
+                <td>{{ $role->name }}</td>
+                <td>{{ $role->users->count() }}</td>
+                <td>
+                    <!-- Optional Edit/Delete buttons -->
+                    @if ($role->users->count() === 0)
+                        <form method="POST" action="{{ route('admin.roles.destroy', $role->id) }}" onsubmit="return confirm('Delete this role?')">
+                            @csrf @method('DELETE')
+                            <button class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                    @endif
+                </td>
+              </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+@endif
+
+<!-- Users Modal -->
+@if(isset($users) && isset($roles))
+<div class="modal fade" id="usersModal" tabindex="-1" aria-labelledby="usersModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content" style="background: var(--container); color: var(--text);">
+      <div class="modal-header">
+        <h5 class="modal-title" id="usersModalLabel">Manage Users</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        @if (session('success'))
+            <div class="alert alert-success">{{ session('success') }}</div>
+        @endif
+        @if (session('error'))
+            <div class="alert alert-danger">{{ session('error') }}</div>
+        @endif
+        <!-- User Creation Form -->
+        <form method="POST" action="{{ route('admin.users.store') }}">
+          @csrf
+          <div class="row mb-3">
+            <div class="col"><input type="text" name="name" class="form-control" placeholder="Name" required></div>
+            <div class="col"><input type="email" name="email" class="form-control" placeholder="Email" required></div>
+            <div class="col"><input type="password" name="password" class="form-control" placeholder="Password" required></div>
+            <div class="col">
+              <select name="role_id" class="form-select" required>
+                @foreach ($roles as $role)
+                  <option value="{{ $role->id }}">{{ ucfirst($role->name) }}</option>
+                @endforeach
+              </select>
+            </div>
+            <div class="col">
+              <button class="btn btn-success" type="submit">Add User</button>
+            </div>
+          </div>
+        </form>
+
+        <!-- User Table -->
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Name</th><th>Email</th><th>Role</th><th>Password</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach ($users as $user)
+              <tr>
+                <td>{{ $user->name }}</td>
+                <td>{{ $user->email }}</td>
+                <td>{{ $user->role->name }}</td>
+                <td>
+                  <span class="password-dots">••••••</span>
+                  <button type="button" class="btn btn-sm btn-outline-secondary toggle-password">👁</button>
+                </td>
+                <td>
+                  <form action="{{ route('admin.users.destroy', $user) }}" method="POST">
+                    @csrf @method('DELETE')
+                    <button class="btn btn-sm btn-danger">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+@endif
+
+    <script>
+    document.querySelectorAll('.toggle-password').forEach(button => {
+    button.addEventListener('click', function () {
+        const td = this.closest('td');
+        const dots = td.querySelector('.password-dots');
+        if (dots.innerText === '••••••') {
+        dots.innerText = '[Hidden]'; // replace with logic if you store visible passwords (not recommended)
+        } else {
+        dots.innerText = '••••••';
+        }
+    });
+    });
+    </script>
+
 </body>
 </html>
